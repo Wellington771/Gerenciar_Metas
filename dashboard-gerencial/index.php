@@ -32,7 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="container d-flex justify-content-center align-items-center" style="height:100vh;">
+    <!-- Barra verde topo -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #388e3c;">
+      <div class="container-fluid px-4">
+        <span class="navbar-brand" style="font-size:1.5rem;font-weight:500;">Dashboard Gerencial</span>
+      </div>
+    </nav>
+    <div class="container d-flex justify-content-center align-items-center" style="height:90vh;">
         <div class="card p-4 shadow" style="min-width:350px;">
             <h3 class="mb-3 text-center" style="color:#388e3c;">Dashboard Gerencial</h3>
             <?php if ($erro): ?>
@@ -51,5 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
         </div>
     </div>
+
 </body>
 </html>
