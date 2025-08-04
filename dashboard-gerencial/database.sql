@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS Colaboradores (
     MetaMaquiagem DECIMAL(12,2) NOT NULL DEFAULT 0,
     MetaSkinCare DECIMAL(12,2) NOT NULL DEFAULT 0,
     MetaProdutosGerais DECIMAL(12,2) NOT NULL DEFAULT 0
+    -- Categoria VARCHAR(30) -- opcional, caso queira categorizar colaboradores
 );
 
 -- Tabela HistoricoVendas
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS HistoricoVendas (
     ValorVenda DECIMAL(12,2) NOT NULL,
     Categoria VARCHAR(30) NOT NULL,
     InfoCSV TEXT,
-    FOREIGN KEY (ColaboradorID) REFERENCES Colaboradores(ColaboradorID)
+    FOREIGN KEY (ColaboradorID) REFERENCES Colaboradores(ColaboradorID) ON DELETE CASCADE
 );
 
 -- Populando Colaboradores

@@ -1,48 +1,103 @@
 <?php
-// fechar_mes.php
 session_start();
 if (!isset($_SESSION['usuario'])) {
     header('Location: index.php');
     exit;
 }
 require_once 'config/database.php';
+
 $confirmado = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
     $pdo->exec('UPDATE Colaboradores SET ValorAtualVendas = 0');
     $confirmado = true;
+
+    // Redireciona para dashboard após 3 segundos
+    header("refresh:3;url=dashboard.php");
 }
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Fechar Mês</title>
+    <title>Fechar Mês - Rumo à Meta</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #e8f5e9; }
-        .btn-success { background-color: #388e3c; border: none; }
+        body {
+            background-color: #f4f6f9;
+        }
+        .card-custom {
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .btn-primary {
+            background-color: #388e3c;
+            border-color: #388e3c;
+        }
+        .btn-primary:hover {
+            background-color: #2e7d32;
+        }
+        .btn-danger {
+            background-color: #d32f2f;
+            border-color: #d32f2f;
+        }
+        .btn-danger:hover {
+            background-color: #b71c1c;
+        }
     </style>
 </head>
 <body>
+
 <?php include 'includes/header.php'; ?>
-<div class="container">
-    <div class="row justify-content-center mt-5">
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
         <div class="col-md-6">
-            <div class="card p-4">
-                <h4 class="mb-3" style="color:#388e3c;">Fechar Mês</h4>
+            <div class="card card-custom p-4 bg-white">
+                <h4 class="mb-3 text-center text-success">Fechamento de Mês</h4>
+
                 <?php if ($confirmado): ?>
-                    <div class="alert alert-success">Vendas zeradas com sucesso!</div>
+                    <div class="alert alert-success text-center">
+                        ✅ Todas as vendas foram zeradas com sucesso!<br>
+                        Redirecionando para o painel...
+                    </div>
                 <?php else: ?>
-                    <form method="post">
-                        <p>Tem certeza que deseja zerar todas as vendas dos colaboradores?</p>
-                        <button type="submit" name="confirmar" class="btn btn-success">Confirmar</button>
+                    <p class="text-center">Esta ação irá <strong>reiniciar o registro de vendas</strong> de todos os colaboradores, dando início a um novo ciclo comercial.</p>
+                    <div class="text-center">
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal">
+                            Fechar Mês
+                        </button>
                         <a href="dashboard.php" class="btn btn-secondary ms-2">Cancelar</a>
-                    </form>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+        <form method="post">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="confirmModalLabel">Confirmar Fechamento do Mês</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                Ao prosseguir, todas as vendas dos colaboradores serão zeradas, iniciando um novo ciclo. Deseja confirmar essa operação?<br>
+                <strong>Esta ação é irreversível.</strong>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" name="confirmar" class="btn btn-danger">Sim, Fechar Mês</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+        </form>
+    </div>
+  </div>
+</div>
+
 <?php include 'includes/footer.php'; ?>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,23 +1,31 @@
 <?php
-// metas.php - Tela para definir metas dos colaboradores
 session_start();
-if (!isset($_SESSION['usuario'])) {
-    header('Location: index.php');
+require_once 'config/database.php';
+
+function moedaParaFloatPHP($valor) {
+    $valor = str_replace('.', '', $valor);
+    $valor = str_replace(',', '.', $valor);
+    return floatval($valor);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['colaboradores'])) {
+    foreach ($_POST['colaboradores'] as $id => $dados) {
+        $maquiagem = moedaParaFloatPHP($dados['meta_maquiagem']);
+        $skincare = moedaParaFloatPHP($dados['meta_skincare']);
+        $produtosGerais = moedaParaFloatPHP($dados['meta_produtos_gerais']);
+        $metaTotal = $maquiagem + $skincare + $produtosGerais;
+
+        $stmt = $pdo->prepare("UPDATE Colaboradores 
+            SET MetaMaquiagem = ?, MetaSkinCare = ?, MetaProdutosGerais = ?, MetaMensal = ? 
+            WHERE ColaboradorID = ?");
+        $stmt->execute([$maquiagem, $skincare, $produtosGerais, $metaTotal, $id]);
+    }
+
+    header("Location: dashboard.php");
     exit;
 }
-require_once 'config/database.php';
-$msg = '';
-// Atualiza meta se enviado
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['colaborador_id'], $_POST['meta_mensal'])) {
-    $colaborador_id = intval($_POST['colaborador_id']);
-    $meta_mensal = floatval(str_replace(',', '.', $_POST['meta_mensal']));
-    $stmt = $pdo->prepare('UPDATE Colaboradores SET MetaMensal = ? WHERE ColaboradorID = ?');
-    $stmt->execute([$meta_mensal, $colaborador_id]);
-    $msg = 'Meta atualizada com sucesso!';
-}
-// Busca colaboradores
-$stmt = $pdo->query('SELECT * FROM Colaboradores ORDER BY NomeCompleto');
-$colaboradores = $stmt->fetchAll();
+
+$colaboradores = $pdo->query("SELECT * FROM Colaboradores ORDER BY NomeCompleto")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -26,45 +34,100 @@ $colaboradores = $stmt->fetchAll();
     <title>Definir Metas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #e8f5e9; }
-        .btn-success { background-color: #388e3c; border: none; }
+        body { background-color: #f4fdf7; }
+        .table-success td { vertical-align: middle; }
+        input[readonly] { background-color: #d0f0d0; font-weight: bold; }
+        .btn-primary { background-color: #388e3c; border: none; }
+        .btn-secondary { background-color: #8d8d8d; border: none; }
     </style>
 </head>
 <body>
-<?php include 'includes/header.php'; ?>
-<div class="container">
-    <h4 class="mt-4" style="color:#388e3c;">Definir Metas dos Colaboradores</h4>
-    <?php if ($msg): ?>
-        <div class="alert alert-success mt-2"> <?php echo $msg; ?> </div>
-    <?php endif; ?>
-    <table class="table table-bordered table-success mt-3">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Código</th>
-                <th>Meta Mensal (R$)</th>
-                <th>Ação</th>
-            </tr>
-        </thead>
-        <tbody>
+<div class="container mt-4">
+    <h4 class="mb-4" style="color:#2e7d32;">Definir Metas dos Colaboradores</h4>
+
+    <form method="post" onsubmit="return confirmarEnvio();">
+        <table class="table table-bordered table-success">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Código</th>
+                    <th>Maquiagem</th>
+                    <th>Skin Care</th>
+                    <th>Eudora</th>
+                    <th>Total do Mês</th>
+                </tr>
+            </thead>
+            <tbody>
             <?php foreach ($colaboradores as $c): ?>
-            <tr>
-                <form method="post">
-                    <td><?php echo htmlspecialchars($c['NomeCompleto']); ?></td>
-                    <td><?php echo htmlspecialchars($c['CodigoExterno']); ?></td>
+                <tr>
+                    <td><?= htmlspecialchars($c['NomeCompleto']) ?></td>
+                    <td><?= htmlspecialchars($c['CodigoExterno']) ?></td>
                     <td>
-                        <input type="number" step="0.01" name="meta_mensal" value="<?php echo number_format($c['MetaMensal'],2,'.',''); ?>" class="form-control" required>
-                        <input type="hidden" name="colaborador_id" value="<?php echo $c['ColaboradorID']; ?>">
+                        <input type="text" name="colaboradores[<?= $c['ColaboradorID'] ?>][meta_maquiagem]" 
+                               class="form-control moeda" 
+                               value="<?= number_format($c['MetaMaquiagem'], 2, ',', '.') ?>" required>
                     </td>
                     <td>
-                        <button type="submit" class="btn btn-success">Salvar</button>
+                        <input type="text" name="colaboradores[<?= $c['ColaboradorID'] ?>][meta_skincare]" 
+                               class="form-control moeda" 
+                               value="<?= number_format($c['MetaSkinCare'], 2, ',', '.') ?>" required>
                     </td>
-                </form>
-            </tr>
+                    <td>
+                        <input type="text" name="colaboradores[<?= $c['ColaboradorID'] ?>][meta_produtos_gerais]" 
+                               class="form-control moeda" 
+                               value="<?= number_format($c['MetaProdutosGerais'], 2, ',', '.') ?>" required>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control total" readonly>
+                    </td>
+                </tr>
             <?php endforeach; ?>
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+            <a href="dashboard.php" class="btn btn-secondary px-4">Voltar ao Início</a>
+            <button type="submit" class="btn btn-primary px-4">Salvar Todas</button>
+        </div>
+    </form>
 </div>
-<?php include 'includes/footer.php'; ?>
+
+<script>
+function formatarMoeda(valor) {
+    valor = valor.replace(/\D/g, '');
+    if (valor.length === 0) return '';
+    valor = (parseInt(valor) / 100).toFixed(2) + "";
+    valor = valor.replace(".", ",");
+    valor = valor.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return valor;
+}
+
+function moedaParaFloat(valor) {
+    return parseFloat(valor.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function atualizarTotal(tr) {
+    const campos = tr.querySelectorAll(".moeda");
+    const total = tr.querySelector(".total");
+    let soma = 0;
+    campos.forEach(input => soma += moedaParaFloat(input.value));
+    total.value = soma.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+document.querySelectorAll(".moeda").forEach(input => {
+    input.value = formatarMoeda(input.value.replace(/\D/g, ''));
+
+    input.addEventListener("input", e => {
+        let valor = e.target.value.replace(/\D/g, "");
+        e.target.value = formatarMoeda(valor);
+        atualizarTotal(e.target.closest("tr"));
+    });
+
+    atualizarTotal(input.closest("tr"));
+});
+
+function confirmarEnvio() {
+    return confirm("Tem certeza que deseja salvar todas as metas?");
+}
+</script>
 </body>
 </html>
