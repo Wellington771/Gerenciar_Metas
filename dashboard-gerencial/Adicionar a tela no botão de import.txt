@@ -1,0 +1,4 @@
+Adicionar a tela no botão de importar onde a gerente poderá escolher qual tipo de produto ela quer importar (Eudora, skin care ou maquiagem). 
+Dentro de cada opção haverá o calculo de porcentagem. 
+Login separado para vendedoras(apenas visualizar).
+Adiconar vendedoras (apenas adm).
