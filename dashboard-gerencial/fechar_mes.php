@@ -1,17 +1,28 @@
 <?php
+// Inicia a sessão
 session_start();
+
+// Verifica se o usuário está logado; caso contrário, redireciona para a página de login
 if (!isset($_SESSION['usuario'])) {
     header('Location: index.php');
     exit;
 }
+
+// Inclui a conexão com o banco de dados
 require_once 'config/database.php';
 
+// Flag para saber se a confirmação de fechamento foi feita
 $confirmado = false;
+
+// Verifica se o formulário foi enviado e se o botão "confirmar" foi clicado
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
+    // Reseta todas as vendas dos colaboradores no banco de dados
     $pdo->exec('UPDATE Colaboradores SET ValorAtualVendas = 0');
+
+    // Seta como confirmado para exibir mensagem de sucesso
     $confirmado = true;
 
-    // Redireciona para dashboard após 3 segundos
+    // Redireciona de volta para o dashboard após 3 segundos
     header("refresh:3;url=dashboard.php");
 }
 ?>
@@ -20,7 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
 <head>
     <meta charset="UTF-8">
     <title>Fechar Mês - Rumo à Meta</title>
+
+    <!-- CSS do Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Estilos personalizados -->
     <style>
         body {
             background-color: #f4f6f9;
@@ -47,8 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
 </head>
 <body>
 
+<!-- Cabeçalho da aplicação -->
 <?php include 'includes/header.php'; ?>
 
+<!-- Conteúdo principal -->
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-6">
@@ -56,16 +73,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
                 <h4 class="mb-3 text-center text-success">Fechamento de Mês</h4>
 
                 <?php if ($confirmado): ?>
+                    <!-- Mensagem de sucesso após zerar as vendas -->
                     <div class="alert alert-success text-center">
                         ✅ Todas as vendas foram zeradas com sucesso!<br>
                         Redirecionando para o painel...
                     </div>
                 <?php else: ?>
-                    <p class="text-center">Esta ação irá <strong>reiniciar o registro de vendas</strong> de todos os colaboradores, dando início a um novo ciclo comercial.</p>
+                    <!-- Instruções e botões -->
+                    <p class="text-center">
+                        Esta ação irá <strong>reiniciar o registro de vendas</strong> de todos os colaboradores,
+                        dando início a um novo ciclo comercial.
+                    </p>
                     <div class="text-center">
+                        <!-- Botão que abre o modal de confirmação -->
                         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmModal">
                             Fechar Mês
                         </button>
+                        <!-- Link para cancelar e voltar ao dashboard -->
                         <a href="dashboard.php" class="btn btn-secondary ms-2">Cancelar</a>
                     </div>
                 <?php endif; ?>
@@ -74,21 +98,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
     </div>
 </div>
 
-<!-- Modal de Confirmação -->
+<!-- Modal de confirmação -->
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
+        <!-- Formulário de confirmação que envia POST para esta mesma página -->
         <form method="post">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title" id="confirmModalLabel">Confirmar Fechamento do Mês</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
-                Ao prosseguir, todas as vendas dos colaboradores serão zeradas, iniciando um novo ciclo. Deseja confirmar essa operação?<br>
+                Ao prosseguir, todas as vendas dos colaboradores serão zeradas, iniciando um novo ciclo.<br>
                 <strong>Esta ação é irreversível.</strong>
             </div>
             <div class="modal-footer">
+                <!-- Botão para confirmar a operação -->
                 <button type="submit" name="confirmar" class="btn btn-danger">Sim, Fechar Mês</button>
+                <!-- Botão para cancelar o modal -->
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
             </div>
         </form>
@@ -96,8 +123,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
   </div>
 </div>
 
+<!-- Rodapé da aplicação -->
 <?php include 'includes/footer.php'; ?>
 
+<!-- JS do Bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

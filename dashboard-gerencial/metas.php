@@ -1,30 +1,42 @@
 <?php
+// Inicia a sessão do usuário
 session_start();
+
+// Importa a conexão com o banco de dados
 require_once 'config/database.php';
 
+// Função que converte um valor em formato de moeda brasileira para float
 function moedaParaFloatPHP($valor) {
-    $valor = str_replace('.', '', $valor);
-    $valor = str_replace(',', '.', $valor);
-    return floatval($valor);
+    $valor = str_replace('.', '', $valor); // remove pontos
+    $valor = str_replace(',', '.', $valor); // troca vírgula por ponto
+    return floatval($valor); // retorna como float
 }
 
+// Se o formulário foi enviado com dados dos colaboradores
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['colaboradores'])) {
+    // Percorre todos os colaboradores enviados
     foreach ($_POST['colaboradores'] as $id => $dados) {
+        // Converte os valores das metas
         $maquiagem = moedaParaFloatPHP($dados['meta_maquiagem']);
         $skincare = moedaParaFloatPHP($dados['meta_skincare']);
         $produtosGerais = moedaParaFloatPHP($dados['meta_produtos_gerais']);
+
+        // Soma total das metas do mês
         $metaTotal = $maquiagem + $skincare + $produtosGerais;
 
+        // Atualiza no banco de dados
         $stmt = $pdo->prepare("UPDATE Colaboradores 
             SET MetaMaquiagem = ?, MetaSkinCare = ?, MetaProdutosGerais = ?, MetaMensal = ? 
             WHERE ColaboradorID = ?");
         $stmt->execute([$maquiagem, $skincare, $produtosGerais, $metaTotal, $id]);
     }
 
+    // Redireciona de volta ao dashboard
     header("Location: dashboard.php");
     exit;
 }
 
+// Consulta todos os colaboradores
 $colaboradores = $pdo->query("SELECT * FROM Colaboradores ORDER BY NomeCompleto")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -45,6 +57,7 @@ $colaboradores = $pdo->query("SELECT * FROM Colaboradores ORDER BY NomeCompleto"
 <div class="container mt-4">
     <h4 class="mb-4" style="color:#2e7d32;">Definir Metas dos Colaboradores</h4>
 
+    <!-- Formulário de envio das metas -->
     <form method="post" onsubmit="return confirmarEnvio();">
         <table class="table table-bordered table-success">
             <thead>
@@ -84,6 +97,8 @@ $colaboradores = $pdo->query("SELECT * FROM Colaboradores ORDER BY NomeCompleto"
             <?php endforeach; ?>
             </tbody>
         </table>
+
+        <!-- Botões de ação -->
         <div class="d-flex justify-content-end gap-2 mt-3">
             <a href="dashboard.php" class="btn btn-secondary px-4">Voltar ao Início</a>
             <button type="submit" class="btn btn-primary px-4">Salvar Todas</button>
@@ -92,8 +107,9 @@ $colaboradores = $pdo->query("SELECT * FROM Colaboradores ORDER BY NomeCompleto"
 </div>
 
 <script>
+// Formata para o padrão de moeda brasileira
 function formatarMoeda(valor) {
-    valor = valor.replace(/\D/g, '');
+    valor = valor.replace(/\D/g, ''); // remove tudo que não é número
     if (valor.length === 0) return '';
     valor = (parseInt(valor) / 100).toFixed(2) + "";
     valor = valor.replace(".", ",");
@@ -101,10 +117,12 @@ function formatarMoeda(valor) {
     return valor;
 }
 
+// Converte texto de moeda para float (ex: "1.234,56" -> 1234.56)
 function moedaParaFloat(valor) {
     return parseFloat(valor.replace(/\./g, '').replace(',', '.')) || 0;
 }
 
+// Atualiza o campo de total por linha (colaborador)
 function atualizarTotal(tr) {
     const campos = tr.querySelectorAll(".moeda");
     const total = tr.querySelector(".total");
@@ -113,18 +131,23 @@ function atualizarTotal(tr) {
     total.value = soma.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Aplica máscara de moeda e calcula total automaticamente
 document.querySelectorAll(".moeda").forEach(input => {
+    // Aplica a formatação inicial
     input.value = formatarMoeda(input.value.replace(/\D/g, ''));
 
+    // Ao digitar no campo
     input.addEventListener("input", e => {
         let valor = e.target.value.replace(/\D/g, "");
         e.target.value = formatarMoeda(valor);
         atualizarTotal(e.target.closest("tr"));
     });
 
+    // Atualiza o total ao carregar
     atualizarTotal(input.closest("tr"));
 });
 
+// Confirma envio do formulário
 function confirmarEnvio() {
     return confirm("Tem certeza que deseja salvar todas as metas?");
 }
