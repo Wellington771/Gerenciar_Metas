@@ -14,22 +14,20 @@ if (!isset($_SESSION['usuario'])) {
   <title>Menu Lateral</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
-    /* Navbar verde escuro */
     .navbar {
       background-color: #2e7d32 !important;
     }
-    /* Texto "Bem vindo" */
+
     .usuario-texto {
       color: white;
       font-weight: bold;
       font-size: 1.1rem;
     }
 
-    /* Sidebar - começa fora da tela */
     #sidebarMenu {
       position: fixed;
       top: 0;
-      left: -250px; /* escondido à esquerda */
+      left: -250px;
       width: 250px;
       height: 100vh;
       background-color: #2e7d32;
@@ -40,12 +38,10 @@ if (!isset($_SESSION['usuario'])) {
       overflow-y: auto;
     }
 
-    /* Sidebar aberto */
     #sidebarMenu.active {
       left: 0;
     }
 
-    /* Fundo escurecido atrás do menu */
     #sidebarOverlay {
       position: fixed;
       top: 0;
@@ -63,7 +59,6 @@ if (!isset($_SESSION['usuario'])) {
       visibility: visible;
     }
 
-    /* Estilo links da sidebar */
     #sidebarMenu a {
       color: white;
       font-weight: 600;
@@ -78,7 +73,6 @@ if (!isset($_SESSION['usuario'])) {
       color: #e8f5e9;
     }
 
-    /* Botão Menu */
     #btnToggleSidebar {
       background: white;
       color: #2e7d32;
@@ -93,7 +87,6 @@ if (!isset($_SESSION['usuario'])) {
       cursor: pointer;
     }
 
-    /* Container navbar */
     .navbar-container {
       display: flex;
       justify-content: space-between;
@@ -118,6 +111,7 @@ if (!isset($_SESSION['usuario'])) {
   <a href="metas.php">Definir Metas</a>
   <a href="fechar_mes.php">Fechar Mês</a>
   <a href="#" data-bs-toggle="modal" data-bs-target="#modalImportar">Importar Arquivos</a>
+  <a href="relatorios.php">Relatórios</a>
   <a href="logout.php">Sair</a>
 </div>
 
@@ -140,6 +134,3 @@ if (!isset($_SESSION['usuario'])) {
     overlay.classList.remove('active');
   });
 </script>
-
-</body>
-</html>

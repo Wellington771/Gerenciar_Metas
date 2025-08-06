@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
                             Fechar Mês
                         </button>
                         <!-- Link para cancelar e voltar ao dashboard -->
-                        <a href="dashboard.php" class="btn btn-secondary ms-2">Cancelar</a>
+                        <a href="dashboard.php" class="btn btn-secondary ms-2">Voltar ao Início</a>
                     </div>
                 <?php endif; ?>
             </div>
