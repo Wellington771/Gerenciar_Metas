@@ -1,40 +1,71 @@
--- Criação do banco de dados
-CREATE DATABASE IF NOT EXISTS GerenciadorMetasDB;
-USE GerenciadorMetasDB;
+-- CriaÃ§Ã£o do banco de dados (caso ainda nÃ£o tenha criado)
+CREATE DATABASE IF NOT EXISTS `gerenciadormetasdb`
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_general_ci;
 
--- Tabela Colaboradores
-CREATE TABLE IF NOT EXISTS Colaboradores (
-    ColaboradorID INT AUTO_INCREMENT PRIMARY KEY,
-    NomeCompleto VARCHAR(100) NOT NULL,
-    CodigoExterno VARCHAR(20) NOT NULL UNIQUE,
-    ValorAtualVendas DECIMAL(12,2) NOT NULL DEFAULT 0,
-    MetaMensal DECIMAL(12,2) NOT NULL DEFAULT 0,
-    MetaMaquiagem DECIMAL(12,2) NOT NULL DEFAULT 0,
-    MetaSkinCare DECIMAL(12,2) NOT NULL DEFAULT 0,
-    MetaProdutosGerais DECIMAL(12,2) NOT NULL DEFAULT 0
-    -- Categoria VARCHAR(30) -- opcional, caso queira categorizar colaboradores
-);
+USE `gerenciadormetasdb`;
 
--- Tabela HistoricoVendas
-CREATE TABLE IF NOT EXISTS HistoricoVendas (
-    VendaID INT AUTO_INCREMENT PRIMARY KEY,
-    ColaboradorID INT NOT NULL,
-    DataVenda TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ValorVenda DECIMAL(12,2) NOT NULL,
-    Categoria VARCHAR(30) NOT NULL,
-    InfoCSV TEXT,
-    FOREIGN KEY (ColaboradorID) REFERENCES Colaboradores(ColaboradorID) ON DELETE CASCADE
-);
+-- Tabela de colaboradores (usuÃ¡rios: vendedores e administradores)
+CREATE TABLE `colaboradores` (
+  `ColaboradorID` INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primÃ¡ria',
+  `Email` VARCHAR(100) NOT NULL UNIQUE COMMENT 'E-mail Ãºnico para login',
+  `SenhaHash` VARCHAR(255) NOT NULL COMMENT 'Senha criptografada',
+  `NivelAcesso` ENUM('Admin', 'Colaborador') NOT NULL DEFAULT 'Colaborador' COMMENT 'NÃ­vel de permissÃ£o',
+  `Ativo` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '0 = bloqueado, 1 = ativo',
+  `CodigoExterno` VARCHAR(20) NOT NULL UNIQUE COMMENT 'CÃ³digo externo ou identificador',
+  `DataCadastro` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data do cadastro',
+  `UltimoLogin` DATETIME DEFAULT NULL COMMENT 'Ãšltimo acesso ao sistema',
+  PRIMARY KEY (`ColaboradorID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Populando Colaboradores
-INSERT INTO Colaboradores (NomeCompleto, CodigoExterno, MetaMensal, MetaMaquiagem, MetaSkinCare, MetaProdutosGerais) VALUES
-('Ana Paula', '18889218', 10000, 4000, 3000, 3000),
-('Cirleide', '18889165', 12000, 5000, 4000, 3000),
-('Luziane', '11784209', 9000, 3000, 3000, 3000),
-('Camila', '20293243', 11000, 4000, 4000, 3000);
+-- Tabela de revendedores (clientes ou representantes)
+CREATE TABLE `revendedores` (
+  `RevendedorID` INT NOT NULL AUTO_INCREMENT,
+  `Nome` VARCHAR(100) NOT NULL,
+  PRIMARY KEY (`RevendedorID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Exemplo de vendas por categoria
-INSERT INTO HistoricoVendas (ColaboradorID, ValorVenda, Categoria, InfoCSV) VALUES
-(1, 2000, 'maquiagem', 'CSV info'),
-(1, 1500, 'skin care', 'CSV info'),
-(2, 3000, 'produtos gerais', 'CSV info');
+-- Tabela de produtos
+CREATE TABLE `produtos` (
+  `ProdutoID` INT NOT NULL AUTO_INCREMENT,
+  `NomeProduto` VARCHAR(100) NOT NULL,
+  `Categoria` VARCHAR(100),
+  `PrecoUnitario` DECIMAL(12,2),
+  PRIMARY KEY (`ProdutoID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Tabela de configuraÃ§Ãµes gerais do sistema
+CREATE TABLE `configuracao` (
+  `Chave` VARCHAR(50) NOT NULL,
+  `Valor` VARCHAR(100) NOT NULL,
+  PRIMARY KEY (`Chave`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Tabela de metas
+CREATE TABLE `metas` (
+  `MetaID` INT NOT NULL AUTO_INCREMENT,
+  `ColaboradorID` INT,
+  `RevendedorID` INT,
+  `ProdutoID` INT,
+  `MesReferencia` DATE NOT NULL,
+  `ValorMeta` DECIMAL(12,2) NOT NULL,
+  `ValorPraticado` DECIMAL(12,2) DEFAULT 0.00,
+  PRIMARY KEY (`MetaID`),
+  FOREIGN KEY (`ColaboradorID`) REFERENCES `colaboradores`(`ColaboradorID`) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (`RevendedorID`) REFERENCES `revendedores`(`RevendedorID`) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (`ProdutoID`) REFERENCES `produtos`(`ProdutoID`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Tabela de historico de vendas
+CREATE TABLE `historicovendas` (
+  `HistoricoID` INT NOT NULL AUTO_INCREMENT,
+  `ColaboradorID` INT NOT NULL,
+  `RevendedorID` INT,
+  `ProdutoID` INT,
+  `ValorVenda` DECIMAL(12,2) NOT NULL,
+  `DataVenda` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`HistoricoID`),
+  FOREIGN KEY (`ColaboradorID`) REFERENCES `colaboradores`(`ColaboradorID`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`RevendedorID`) REFERENCES `revendedores`(`RevendedorID`) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (`ProdutoID`) REFERENCES `produtos`(`ProdutoID`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
