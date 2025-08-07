@@ -110,7 +110,7 @@ if (!isset($_SESSION['usuario'])) {
   <a href="adicionar_colaborador.php">Adicionar Colaborador</a>
   <a href="metas.php">Definir Metas</a>
   <a href="fechar_mes.php">Fechar Mês</a>
-  <a href="#" data-bs-toggle="modal" data-bs-target="#modalImportar">Importar Arquivos</a>
+  <a href="importar_arquivos.php">Importar Arquivos</a> <!-- ✅ Alterado aqui -->
   <a href="relatorios.php">Relatórios</a>
   <a href="logout.php">Sair</a>
 </div>
@@ -134,3 +134,5 @@ if (!isset($_SESSION['usuario'])) {
     overlay.classList.remove('active');
   });
 </script>
+</body>
+</html>
