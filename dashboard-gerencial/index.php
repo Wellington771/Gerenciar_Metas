@@ -1,222 +1,161 @@
 <?php
-// Inicia a sessão para armazenar dados do usuário durante a navegação
 session_start();
 
-// Se já existir um usuário logado na sessão, redireciona direto para dashboard.php
-if (isset($_SESSION['usuario'])) {
-    header('Location: dashboard.php');
-    exit; // Encerra o script para evitar que o restante do código seja executado
+if (!isset($_SESSION['usuario'])) {
+    header('Location: index.php');
+    exit;
 }
 
-// Variável que armazenará a mensagem de erro para exibir na tela, caso login falhe
-$erro = '';
+// Configuração do banco de dados
+$host = 'localhost';
+$usuario_db = 'root';
+$senha_db = '';
+$banco = 'gerenciadormetasdb';
 
-// Verifica se o formulário foi enviado via método POST
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Captura os valores enviados do formulário via POST,
-    // caso não exista, atribui string vazia
-    $usuario = $_POST['usuario'] ?? '';
-    $senha = $_POST['senha'] ?? '';
+$conn = new mysqli($host, $usuario_db, $senha_db, $banco);
+if ($conn->connect_error) {
+    die('Erro de conexão: ' . $conn->connect_error);
+}
 
-    // Verifica se usuário e senha conferem com valores fixos pré-definidos
-    if ($usuario === 'Geane_Lacerda' && $senha === 'Lacerd@981') {
-        // Se estiver correto, salva o usuário na sessão para manter o login
-        $_SESSION['usuario'] = $usuario;
+// Mês de referência (atual)
+$mesReferencia = date('Y-m-01');
 
-        // Redireciona para a página dashboard.php
-        header('Location: dashboard.php');
-        exit; // Encerra o script para garantir o redirecionamento imediato
-    } else {
-        // Caso usuário ou senha estejam errados, define mensagem de erro
-        $erro = 'Usuário ou senha inválidos!';
+// Busca colaboradores ativos que NÃO são Admin
+$colaboradores = [];
+$result = $conn->query("SELECT ColaboradorID, NomeCompleto, CodigoExterno FROM colaboradores WHERE Ativo = 1 AND NivelAcesso = 'Colaborador' ORDER BY NomeCompleto");
+while ($row = $result->fetch_assoc()) {
+    $colaboradores[$row['ColaboradorID']] = $row;
+}
+
+// Busca produtos
+$produtos = [];
+$result = $conn->query("SELECT ProdutoID, NomeProduto FROM produtos ORDER BY NomeProduto");
+while ($row = $result->fetch_assoc()) {
+    $produtos[$row['ProdutoID']] = $row['NomeProduto'];
+}
+
+// Busca metas do mês
+$metas = [];
+$stmt = $conn->prepare("SELECT * FROM metas WHERE MesReferencia = ?");
+$stmt->bind_param('s', $mesReferencia);
+$stmt->execute();
+$res = $stmt->get_result();
+while ($row = $res->fetch_assoc()) {
+    $metas[$row['ColaboradorID']][$row['ProdutoID']] = $row['ValorMeta'];
+}
+$stmt->close();
+
+// Busca vendas do mês
+$vendas = [];
+$stmt = $conn->prepare("SELECT ColaboradorID, ProdutoID, SUM(ValorVenda) as TotalVendido FROM historicovendas WHERE DataVenda >= ? GROUP BY ColaboradorID, ProdutoID");
+$stmt->bind_param('s', $mesReferencia);
+$stmt->execute();
+$res = $stmt->get_result();
+while ($row = $res->fetch_assoc()) {
+    $vendas[$row['ColaboradorID']][$row['ProdutoID']] = $row['TotalVendido'];
+}
+$stmt->close();
+
+// Calcula totais por colaborador
+$ranking = [];
+foreach ($colaboradores as $colabId => $colab) {
+    $totalMeta = 0;
+    $totalVendido = 0;
+    foreach ($produtos as $prodId => $nomeProd) {
+        $totalMeta += isset($metas[$colabId][$prodId]) ? $metas[$colabId][$prodId] : 0;
+        $totalVendido += isset($vendas[$colabId][$prodId]) ? $vendas[$colabId][$prodId] : 0;
     }
+    $ranking[] = [
+        'colaborador' => $colab,
+        'meta' => $totalMeta,
+        'vendido' => $totalVendido,
+        'falta' => max($totalMeta - $totalVendido, 0)
+    ];
 }
+
+// Ordena ranking por vendido (desc)
+usort($ranking, function($a, $b) {
+    return $b['vendido'] <=> $a['vendido'];
+});
+
+// Receita total
+$receitaTotal = array_sum(array_column($ranking, 'vendido'));
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <!-- Define a codificação de caracteres para UTF-8 -->
-    <meta charset="UTF-8" />
-    <!-- Define que o layout deve ajustar-se à largura do dispositivo e escala inicial -->
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Login - Dashboard Gerencial</title>
-
-    <!-- Importa o CSS do Bootstrap 5 para estilos prontos e responsivos -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-
-    <!-- Importa os ícones do Bootstrap Icons para usar nos inputs -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-
+    <meta charset="UTF-8">
+    <title>Dashboard Gerencial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Estilo do body com gradiente de fundo suave em tons de verde pastel */
-        body {
-            height: 100vh; /* Altura total da viewport */
-            background: linear-gradient(135deg, #d7ecd9, #f0f7f1);
-            display: flex; /* Usado para centralizar o conteúdo */
-            justify-content: center; /* Centraliza horizontalmente */
-            align-items: center; /* Centraliza verticalmente */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0; /* Remove margens padrão */
-            padding: 1rem; /* Espaçamento interno para pequenas margens */
-        }
-
-        /* Estilo do card que contém o formulário */
-        .card {
-            width: 100%; /* Ocupar toda largura disponível */
-            max-width: 400px; /* Limita largura máxima para telas maiores */
-            border-radius: 1rem; /* Bordas arredondadas */
-            box-shadow: 0 8px 25px rgba(56, 142, 60, 0.25); /* Sombra suave verde */
-            background-color: #fff; /* Fundo branco */
-            padding: 2.5rem 2rem; /* Espaçamento interno do conteúdo */
-            animation: fadeInUp 0.8s ease forwards; /* Animação ao carregar */
-            box-sizing: border-box; /* Inclui padding dentro da largura */
-        }
-
-        /* Definição da animação fadeInUp para o card */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px); /* Começa levemente deslocado para baixo */
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0); /* Termina na posição normal */
-            }
-        }
-
-        /* Estilo do título do card */
-        h3 {
-            color: #2e7d32; /* Verde escuro */
-            margin-bottom: 1.5rem;
-            text-align: center;
-            font-weight: 700;
-            letter-spacing: 1px; /* Espaço entre letras */
-        }
-
-        /* Estilo do ícone dentro do grupo de input */
-        .input-group-text {
-            background-color: #c6dec4; /* Verde claro */
-            color: #2e7d32; /* Verde escuro */
-            border: none; /* Sem borda */
-            border-radius: 0.5rem 0 0 0.5rem; /* Arredonda só os cantos da esquerda */
-            font-size: 1.2rem; /* Ícone maior */
-        }
-
-        /* Estilo dos campos de entrada (inputs) */
-        .form-control {
-            border-radius: 0 0.5rem 0.5rem 0; /* Arredonda cantos da direita */
-            border: 1px solid #c6dec4; /* Borda verde clara */
-            transition: border-color 0.3s ease; /* Animação suave para mudança de borda */
-        }
-
-        /* Estilo do input quando está focado */
-        .form-control:focus {
-            border-color: #388e3c; /* Verde mais forte */
-            box-shadow: 0 0 8px rgba(56, 142, 60, 0.4); /* Sombra verde ao redor */
-            outline: none; /* Remove o contorno padrão */
-        }
-
-        /* Estilo do botão de login */
-        .btn-success {
-            background-color: #388e3c; /* Verde forte */
-            border: none;
-            font-weight: 600;
-            font-size: 1.1rem;
-            padding: 0.6rem;
-            border-radius: 0.6rem; /* Bordas arredondadas */
-            transition: background-color 0.3s ease, box-shadow 0.3s ease; /* Transição suave */
-        }
-
-        /* Efeito ao passar o mouse no botão */
-        .btn-success:hover {
-            background-color: #2e7d32; /* Verde mais escuro */
-            box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4); /* Sombra mais intensa */
-        }
-
-        /* Estilo da mensagem de erro */
-        .alert-danger {
-            font-size: 0.9rem;
-            border-radius: 0.6rem;
-        }
-
-        /* Estilo do rodapé fixo */
-        footer {
-            position: fixed;
-            bottom: 10px; /* Distância da parte inferior da tela */
-            width: 100%;
-            text-align: center;
-            color: #7a9a6a; /* Verde claro */
-            font-size: 0.85rem;
-            user-select: none; /* Impede seleção do texto */
-            font-weight: 300;
-        }
-
-        /* Responsividade para telas menores que 480px (celulares) */
-        @media (max-width: 480px) {
-            .card {
-                padding: 2rem 1.5rem; /* Menos padding nas laterais */
-                border-radius: 1rem;
-            }
-
-            h3 {
-                font-size: 1.5rem; /* Fonte menor no título */
-            }
-
-            .btn-success {
-                font-size: 1rem;
-                padding: 0.5rem; /* Botão menor para caber melhor */
-            }
-        }
+        body { background: #e8f5e9; }
+        .card-kpi { background: #388e3c; color: #fff; }
+        .table-success { background: #c8e6c9; }
+        .btn-success { background-color: #388e3c; border: none; }
     </style>
 </head>
 <body>
+<?php include 'includes/header.php'; ?>
 
-    <!-- Card central contendo o formulário de login -->
-    <div class="card shadow-sm">
-        <!-- Título do sistema -->
-        <h3>Dashboard Gerencial</h3>
-
-        <!-- Se existir erro, mostra o alerta com mensagem -->
-        <?php if ($erro): ?>
-            <div class="alert alert-danger" role="alert">
-                <!-- Ícone de alerta antes da mensagem -->
-                <i class="bi bi-exclamation-triangle-fill"></i> <?php echo $erro; ?>
-            </div>
-        <?php endif; ?>
-
-        <!-- Formulário de login com método POST -->
-        <form method="post" novalidate>
-            <!-- Campo usuário com label e ícone -->
-            <div class="mb-3">
-                <label for="usuario" class="form-label">Usuário</label>
-                <div class="input-group">
-                    <!-- Ícone do usuário -->
-                    <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
-                    <!-- Input para o nome do usuário -->
-                    <input type="text" class="form-control" id="usuario" name="usuario" required autofocus placeholder="Digite seu usuário" />
+<div class="container">
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card card-kpi mb-4 shadow">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Receita Total do Mês</h5>
+                    <h2>R$ <?= number_format($receitaTotal, 2, ',', '.') ?></h2>
                 </div>
             </div>
-
-            <!-- Campo senha com label e ícone -->
-            <div class="mb-4">
-                <label for="senha" class="form-label">Senha</label>
-                <div class="input-group">
-                    <!-- Ícone de cadeado -->
-                    <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-                    <!-- Input para senha -->
-                    <input type="password" class="form-control" id="senha" name="senha" required placeholder="Digite sua senha" />
+        </div>
+        <div class="col-md-8">
+            <div class="card mb-4 shadow" style="border-left: 5px solid #388e3c;">
+                <div class="card-body">
+                    <h5 class="card-title" style="color:#388e3c;">Resumo das Metas do Mês</h5>
+                    <ul class="list-group list-group-flush">
+                        <?php foreach ($ranking as $r): ?>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><strong><?= htmlspecialchars($r['colaborador']['NomeCompleto']) ?></strong> (<?= htmlspecialchars($r['colaborador']['CodigoExterno']) ?>)</span>
+                            <span>Meta: <span class="badge bg-success">R$ <?= number_format($r['meta'], 2, ',', '.') ?></span></span>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
             </div>
-
-            <!-- Botão de envio do formulário -->
-            <button type="submit" class="btn btn-success w-100">Entrar</button>
-        </form>
+        </div>
     </div>
 
-    <!-- Rodapé fixo com copyright -->
-    <footer>
-        &copy; <?php echo date('Y'); ?> Dashboard Gerencial
-    </footer>
-
+    <h4 class="mt-5 mb-3" style="color:#388e3c;"><i class="bi bi-trophy"></i> Ranking de Vendedores</h4>
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle">
+            <thead>
+                <tr>
+                    <th>Posição</th>
+                    <th>Colaborador</th>
+                    <th>Código</th>
+                    <th>Vendas (R$)</th>
+                    <th>Meta (R$)</th>
+                    <th>Falta para Meta (R$)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php $pos = 1; foreach ($ranking as $r): ?>
+                <tr>
+                    <td><?= $pos++ ?></td>
+                    <td><?= htmlspecialchars($r['colaborador']['NomeCompleto']) ?></td>
+                    <td><?= htmlspecialchars($r['colaborador']['CodigoExterno']) ?></td>
+                    <td><?= number_format($r['vendido'], 2, ',', '.') ?></td>
+                    <td><?= number_format($r['meta'], 2, ',', '.') ?></td>
+                    <td>
+                        <?= $r['falta'] > 0 ? number_format($r['falta'], 2, ',', '.') : 'Meta atingida!' ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php include 'includes/footer.php'; ?>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

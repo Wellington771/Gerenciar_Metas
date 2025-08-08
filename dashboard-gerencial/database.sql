@@ -1,20 +1,21 @@
--- CriaÃ§Ã£o do banco de dados (caso ainda nÃ£o tenha criado)
+-- Criação do banco de dados (caso ainda não tenha criado)
 CREATE DATABASE IF NOT EXISTS `gerenciadormetasdb`
   DEFAULT CHARACTER SET utf8mb4
   COLLATE utf8mb4_general_ci;
 
 USE `gerenciadormetasdb`;
 
--- Tabela de colaboradores (usuÃ¡rios: vendedores e administradores)
+-- Tabela de colaboradores (usuários: vendedores e administradores)
 CREATE TABLE `colaboradores` (
-  `ColaboradorID` INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primÃ¡ria',
-  `Email` VARCHAR(100) NOT NULL UNIQUE COMMENT 'E-mail Ãºnico para login',
+  `ColaboradorID` INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primária',
+  `NomeCompleto` VARCHAR(100) NOT NULL COMMENT 'Nome completo do colaborador',
+  `Email` VARCHAR(100) NOT NULL UNIQUE COMMENT 'E-mail único para login',
   `SenhaHash` VARCHAR(255) NOT NULL COMMENT 'Senha criptografada',
-  `NivelAcesso` ENUM('Admin', 'Colaborador') NOT NULL DEFAULT 'Colaborador' COMMENT 'NÃ­vel de permissÃ£o',
+  `NivelAcesso` ENUM('Admin', 'Colaborador') NOT NULL DEFAULT 'Colaborador' COMMENT 'Nível de permissão',
   `Ativo` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '0 = bloqueado, 1 = ativo',
-  `CodigoExterno` VARCHAR(20) NOT NULL UNIQUE COMMENT 'CÃ³digo externo ou identificador',
+  `CodigoExterno` VARCHAR(20) NOT NULL UNIQUE COMMENT 'Código externo ou identificador',
   `DataCadastro` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data do cadastro',
-  `UltimoLogin` DATETIME DEFAULT NULL COMMENT 'Ãšltimo acesso ao sistema',
+  `UltimoLogin` DATETIME DEFAULT NULL COMMENT 'Último acesso ao sistema',
   PRIMARY KEY (`ColaboradorID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -34,7 +35,7 @@ CREATE TABLE `produtos` (
   PRIMARY KEY (`ProdutoID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Tabela de configuraÃ§Ãµes gerais do sistema
+-- Tabela de configurações gerais do sistema
 CREATE TABLE `configuracao` (
   `Chave` VARCHAR(50) NOT NULL,
   `Valor` VARCHAR(100) NOT NULL,
@@ -69,3 +70,6 @@ CREATE TABLE `historicovendas` (
   FOREIGN KEY (`RevendedorID`) REFERENCES `revendedores`(`RevendedorID`) ON DELETE SET NULL ON UPDATE CASCADE,
   FOREIGN KEY (`ProdutoID`) REFERENCES `produtos`(`ProdutoID`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO colaboradores (NomeCompleto, Email, SenhaHash, NivelAcesso, CodigoExterno)
+VALUES ('Geane Lacerda', 'Geane_Lacerda', '$2y$10$EXEMPLOHASHGERADO...', 'Admin', 'GL001');
