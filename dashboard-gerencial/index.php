@@ -1,111 +1,161 @@
 <?php
-<?php
 session_start();
 
-if (isset($_SESSION['usuario'])) {
-    header('Location: dashboard.php');
+if (!isset($_SESSION['usuario'])) {
+    header('Location: index.php');
     exit;
 }
 
-$erro = '';
-
 // Configuração do banco de dados
 $host = 'localhost';
-$usuario_db = 'root'; // Altere conforme seu ambiente
-$senha_db = '';       // Altere conforme seu ambiente
+$usuario_db = 'root';
+$senha_db = '';
 $banco = 'gerenciadormetasdb';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $usuario = $_POST['usuario'] ?? '';
-    $senha = $_POST['senha'] ?? '';
-
-    // Conecta ao banco
-    $conn = new mysqli($host, $usuario_db, $senha_db, $banco);
-    if ($conn->connect_error) {
-        die('Erro de conexão: ' . $conn->connect_error);
-    }
-
-    // Busca o usuário na tabela colaboradores
-    $stmt = $conn->prepare("SELECT ColaboradorID, Email, SenhaHash, NivelAcesso, Ativo FROM colaboradores WHERE Email = ? AND Ativo = 1");
-    $stmt->bind_param('s', $usuario);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($row = $result->fetch_assoc()) {
-        // Verifica a senha (ajuste conforme o hash usado no cadastro)
-        if (password_verify($senha, $row['SenhaHash'])) {
-            $_SESSION['usuario'] = $row['Email'];
-            $_SESSION['nivel_acesso'] = $row['NivelAcesso'];
-            $_SESSION['colaborador_id'] = $row['ColaboradorID'];
-            header('Location: dashboard.php');
-            exit;
-        } else {
-            $erro = 'Usuário ou senha inválidos!';
-        }
-    } else {
-        $erro = 'Usuário ou senha inválidos!';
-    }
-
-    $stmt->close();
-    $conn->close();
+$conn = new mysqli($host, $usuario_db, $senha_db, $banco);
+if ($conn->connect_error) {
+    die('Erro de conexão: ' . $conn->connect_error);
 }
+
+// Mês de referência (atual)
+$mesReferencia = date('Y-m-01');
+
+// Busca colaboradores ativos que NÃO são Admin
+$colaboradores = [];
+$result = $conn->query("SELECT ColaboradorID, NomeCompleto, CodigoExterno FROM colaboradores WHERE Ativo = 1 AND NivelAcesso = 'Colaborador' ORDER BY NomeCompleto");
+while ($row = $result->fetch_assoc()) {
+    $colaboradores[$row['ColaboradorID']] = $row;
+}
+
+// Busca produtos
+$produtos = [];
+$result = $conn->query("SELECT ProdutoID, NomeProduto FROM produtos ORDER BY NomeProduto");
+while ($row = $result->fetch_assoc()) {
+    $produtos[$row['ProdutoID']] = $row['NomeProduto'];
+}
+
+// Busca metas do mês
+$metas = [];
+$stmt = $conn->prepare("SELECT * FROM metas WHERE MesReferencia = ?");
+$stmt->bind_param('s', $mesReferencia);
+$stmt->execute();
+$res = $stmt->get_result();
+while ($row = $res->fetch_assoc()) {
+    $metas[$row['ColaboradorID']][$row['ProdutoID']] = $row['ValorMeta'];
+}
+$stmt->close();
+
+// Busca vendas do mês
+$vendas = [];
+$stmt = $conn->prepare("SELECT ColaboradorID, ProdutoID, SUM(ValorVenda) as TotalVendido FROM historicovendas WHERE DataVenda >= ? GROUP BY ColaboradorID, ProdutoID");
+$stmt->bind_param('s', $mesReferencia);
+$stmt->execute();
+$res = $stmt->get_result();
+while ($row = $res->fetch_assoc()) {
+    $vendas[$row['ColaboradorID']][$row['ProdutoID']] = $row['TotalVendido'];
+}
+$stmt->close();
+
+// Calcula totais por colaborador
+$ranking = [];
+foreach ($colaboradores as $colabId => $colab) {
+    $totalMeta = 0;
+    $totalVendido = 0;
+    foreach ($produtos as $prodId => $nomeProd) {
+        $totalMeta += isset($metas[$colabId][$prodId]) ? $metas[$colabId][$prodId] : 0;
+        $totalVendido += isset($vendas[$colabId][$prodId]) ? $vendas[$colabId][$prodId] : 0;
+    }
+    $ranking[] = [
+        'colaborador' => $colab,
+        'meta' => $totalMeta,
+        'vendido' => $totalVendido,
+        'falta' => max($totalMeta - $totalVendido, 0)
+    ];
+}
+
+// Ordena ranking por vendido (desc)
+usort($ranking, function($a, $b) {
+    return $b['vendido'] <=> $a['vendido'];
+});
+
+// Receita total
+$receitaTotal = array_sum(array_column($ranking, 'vendido'));
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Dashboard Gerencial</title>
-
-    <!-- Importa o Bootstrap 5 para estilização -->
+    <title>Dashboard Gerencial</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Estilos customizados para o layout da tela de login -->
     <style>
-        body {
-            background: #e8f5e9; /* Fundo verde claro */
-        }
-        .card {
-            border-color: #388e3c; /* Borda verde */
-        }
-        .btn-success {
-            background-color: #388e3c;
-            border: none;
-        }
+        body { background: #e8f5e9; }
+        .card-kpi { background: #388e3c; color: #fff; }
+        .table-success { background: #c8e6c9; }
+        .btn-success { background-color: #388e3c; border: none; }
     </style>
 </head>
 <body>
+<?php include 'includes/header.php'; ?>
 
-    <!-- Barra de navegação superior com nome do sistema -->
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #388e3c;">
-        <div class="container-fluid px-4">
-            <span class="navbar-brand" style="font-size:1.5rem;font-weight:500;">Dashboard Gerencial</span>
+<div class="container">
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card card-kpi mb-4 shadow">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Receita Total do Mês</h5>
+                    <h2>R$ <?= number_format($receitaTotal, 2, ',', '.') ?></h2>
+                </div>
+            </div>
         </div>
-    </nav>
-
-    <!-- Área central da tela com o formulário de login -->
-    <div class="container d-flex justify-content-center align-items-center" style="height:90vh;">
-        <div class="card p-4 shadow" style="min-width:350px;">
-            <h3 class="mb-3 text-center" style="color:#388e3c;">Dashboard Gerencial</h3>
-
-            <!-- Exibe erro caso o login tenha falhado -->
-            <?php if ($erro): ?>
-                <div class="alert alert-danger"><?php echo $erro; ?></div>
-            <?php endif; ?>
-
-            <!-- Formulário de login -->
-            <form method="post">
-                <div class="mb-3">
-                    <label for="usuario" class="form-label">Usuário</label>
-                    <input type="text" class="form-control" id="usuario" name="usuario" required autofocus>
+        <div class="col-md-8">
+            <div class="card mb-4 shadow" style="border-left: 5px solid #388e3c;">
+                <div class="card-body">
+                    <h5 class="card-title" style="color:#388e3c;">Resumo das Metas do Mês</h5>
+                    <ul class="list-group list-group-flush">
+                        <?php foreach ($ranking as $r): ?>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><strong><?= htmlspecialchars($r['colaborador']['NomeCompleto']) ?></strong> (<?= htmlspecialchars($r['colaborador']['CodigoExterno']) ?>)</span>
+                            <span>Meta: <span class="badge bg-success">R$ <?= number_format($r['meta'], 2, ',', '.') ?></span></span>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
-                <div class="mb-3">
-                    <label for="senha" class="form-label">Senha</label>
-                    <input type="password" class="form-control" id="senha" name="senha" required>
-                </div>
-                <button type="submit" class="btn btn-success w-100">Entrar</button>
-            </form>
+            </div>
         </div>
     </div>
+
+    <h4 class="mt-5 mb-3" style="color:#388e3c;"><i class="bi bi-trophy"></i> Ranking de Vendedores</h4>
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle">
+            <thead>
+                <tr>
+                    <th>Posição</th>
+                    <th>Colaborador</th>
+                    <th>Código</th>
+                    <th>Vendas (R$)</th>
+                    <th>Meta (R$)</th>
+                    <th>Falta para Meta (R$)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php $pos = 1; foreach ($ranking as $r): ?>
+                <tr>
+                    <td><?= $pos++ ?></td>
+                    <td><?= htmlspecialchars($r['colaborador']['NomeCompleto']) ?></td>
+                    <td><?= htmlspecialchars($r['colaborador']['CodigoExterno']) ?></td>
+                    <td><?= number_format($r['vendido'], 2, ',', '.') ?></td>
+                    <td><?= number_format($r['meta'], 2, ',', '.') ?></td>
+                    <td>
+                        <?= $r['falta'] > 0 ? number_format($r['falta'], 2, ',', '.') : 'Meta atingida!' ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php include 'includes/footer.php'; ?>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
