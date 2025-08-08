@@ -6,6 +6,28 @@ if (!isset($_SESSION['usuario'])) {
     header('Location: index.php');
     exit;
 }
+
+// Conexão com o banco para buscar o nome completo
+$host = 'localhost';
+$usuario_db = 'root';
+$senha_db = '';
+$banco = 'gerenciadormetasdb';
+
+$conn = new mysqli($host, $usuario_db, $senha_db, $banco);
+if ($conn->connect_error) {
+    $nomeCompleto = htmlspecialchars($_SESSION['usuario']);
+} else {
+    $email = $_SESSION['usuario'];
+    $stmt = $conn->prepare("SELECT NomeCompleto FROM colaboradores WHERE Email = ?");
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $stmt->bind_result($nomeCompleto);
+    if (!$stmt->fetch()) {
+        $nomeCompleto = htmlspecialchars($_SESSION['usuario']);
+    }
+    $stmt->close();
+    $conn->close();
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -101,7 +123,7 @@ if (!isset($_SESSION['usuario'])) {
 <nav class="navbar navbar-dark">
   <div class="container-fluid navbar-container">
     <button id="btnToggleSidebar">Menu</button>
-    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($_SESSION['usuario']); ?></div>
+    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($nomeCompleto); ?></div>
   </div>
 </nav>
 
@@ -134,3 +156,5 @@ if (!isset($_SESSION['usuario'])) {
     overlay.classList.remove('active');
   });
 </script>
+</body>
+</html>

@@ -1,32 +1,53 @@
 <?php
-// Inicia a sessão para controlar o login do usuário
+<?php
 session_start();
 
-// Se já estiver logado, redireciona automaticamente para o dashboard
 if (isset($_SESSION['usuario'])) {
     header('Location: dashboard.php');
     exit;
 }
 
-// Variável que armazenará a mensagem de erro, se houver
 $erro = '';
 
-// Verifica se o formulário foi enviado via POST
+// Configuração do banco de dados
+$host = 'localhost';
+$usuario_db = 'root'; // Altere conforme seu ambiente
+$senha_db = '';       // Altere conforme seu ambiente
+$banco = 'gerenciadormetasdb';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Captura os dados do formulário
     $usuario = $_POST['usuario'] ?? '';
     $senha = $_POST['senha'] ?? '';
 
-    // Verifica se os dados estão corretos (usuário e senha fixos)
-    if ($usuario === 'Geane_Lacerda' && $senha === 'Lacerd@981') {
-        // Se estiverem corretos, salva o login na sessão e redireciona
-        $_SESSION['usuario'] = $usuario;
-        header('Location: dashboard.php');
-        exit;
+    // Conecta ao banco
+    $conn = new mysqli($host, $usuario_db, $senha_db, $banco);
+    if ($conn->connect_error) {
+        die('Erro de conexão: ' . $conn->connect_error);
+    }
+
+    // Busca o usuário na tabela colaboradores
+    $stmt = $conn->prepare("SELECT ColaboradorID, Email, SenhaHash, NivelAcesso, Ativo FROM colaboradores WHERE Email = ? AND Ativo = 1");
+    $stmt->bind_param('s', $usuario);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($row = $result->fetch_assoc()) {
+        // Verifica a senha (ajuste conforme o hash usado no cadastro)
+        if (password_verify($senha, $row['SenhaHash'])) {
+            $_SESSION['usuario'] = $row['Email'];
+            $_SESSION['nivel_acesso'] = $row['NivelAcesso'];
+            $_SESSION['colaborador_id'] = $row['ColaboradorID'];
+            header('Location: dashboard.php');
+            exit;
+        } else {
+            $erro = 'Usuário ou senha inválidos!';
+        }
     } else {
-        // Se forem inválidos, mostra mensagem de erro
         $erro = 'Usuário ou senha inválidos!';
     }
+
+    $stmt->close();
+    $conn->close();
 }
 ?>
 <!DOCTYPE html>

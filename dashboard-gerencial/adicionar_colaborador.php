@@ -11,14 +11,19 @@ $msg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome = trim($_POST['nome']);
+    $email = trim($_POST['email']);
+    $senha = trim($_POST['senha']);
     $codigo = trim($_POST['codigo']);
+    $nivel = $_POST['nivel'] ?? 'Colaborador';
 
-    if ($nome && $codigo) {
-        $stmt = $pdo->prepare("INSERT INTO Colaboradores (NomeCompleto, CodigoExterno) VALUES (?, ?)");
-        if ($stmt->execute([$nome, $codigo])) {
+    if ($nome && $email && $senha && $codigo) {
+        $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+
+        $stmt = $pdo->prepare("INSERT INTO colaboradores (NomeCompleto, Email, SenhaHash, NivelAcesso, CodigoExterno) VALUES (?, ?, ?, ?, ?)");
+        if ($stmt->execute([$nome, $email, $senhaHash, $nivel, $codigo])) {
             $msg = "Colaborador adicionado com sucesso!";
         } else {
-            $msg = "Erro ao adicionar colaborador.";
+            $msg = "Erro ao adicionar colaborador: " . $stmt->errorInfo()[2];
         }
     } else {
         $msg = "Preencha todos os campos.";
@@ -54,8 +59,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="text" name="nome" id="nome" class="form-control" required>
         </div>
         <div class="mb-3">
+            <label for="email" class="form-label">E-mail</label>
+            <input type="email" name="email" id="email" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="senha" class="form-label">Senha</label>
+            <input type="password" name="senha" id="senha" class="form-control" required>
+        </div>
+        <div class="mb-3">
             <label for="codigo" class="form-label">Código Externo</label>
             <input type="text" name="codigo" id="codigo" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="nivel" class="form-label">Nível de Acesso</label>
+            <select name="nivel" id="nivel" class="form-select">
+                <option value="Colaborador">Colaborador</option>
+                <option value="Admin">Admin</option>
+            </select>
         </div>
         <div class="d-flex justify-content-end gap-2">
             <a href="dashboard.php" class="btn btn-secondary px-4">Voltar ao Início</a>
