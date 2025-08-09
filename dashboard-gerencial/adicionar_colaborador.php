@@ -72,15 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="mb-3">
             <label for="nivel" class="form-label">Nível de Acesso</label>
-            <select name="nivel" id="nivel" class="form-select">
+            <select name="nivel" id="nivel" class="form-control" required>
                 <option value="Colaborador">Colaborador</option>
                 <option value="Admin">Admin</option>
             </select>
         </div>
-        <div class="d-flex justify-content-end gap-2">
-            <a href="dashboard.php" class="btn btn-secondary px-4">Voltar ao Início</a>
-            <button type="submit" class="btn btn-primary px-4">Adicionar</button>
-        </div>
+        <button type="submit" class="btn btn-success">Adicionar Colaborador</button>
     </form>
 </div>
 
