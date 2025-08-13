@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br"> <!-- Define que o idioma da página é português do Brasil -->
+<html lang="pt-br"> 
 <head>
     <meta charset="UTF-8"> <!-- Define a codificação de caracteres como UTF-8 -->
     <title>Importar Arquivos</title> <!-- Título da aba do navegador -->
