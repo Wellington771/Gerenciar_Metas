@@ -2,32 +2,15 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
 if (!isset($_SESSION['usuario'])) {
     header('Location: index.php');
     exit;
 }
 
-// Conexão com o banco para buscar o nome completo
-$host = 'localhost';
-$usuario_db = 'root';
-$senha_db = '';
-$banco = 'gerenciadormetasdb';
+// Exemplo: $_SESSION['usuario'] é um array, deve conter pelo menos 'NomeCompleto' (ajuste se for outro campo)
+$nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario']['NomeCompleto'] : 'Usuário';
 
-$conn = new mysqli($host, $usuario_db, $senha_db, $banco);
-if ($conn->connect_error) {
-    $nomeCompleto = htmlspecialchars($_SESSION['usuario']);
-} else {
-    $email = $_SESSION['usuario'];
-    $stmt = $conn->prepare("SELECT NomeCompleto FROM colaboradores WHERE Email = ?");
-    $stmt->bind_param('s', $email);
-    $stmt->execute();
-    $stmt->bind_result($nomeCompleto);
-    if (!$stmt->fetch()) {
-        $nomeCompleto = htmlspecialchars($_SESSION['usuario']);
-    }
-    $stmt->close();
-    $conn->close();
-}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -123,7 +106,7 @@ if ($conn->connect_error) {
 <nav class="navbar navbar-dark">
   <div class="container-fluid navbar-container">
     <button id="btnToggleSidebar">Menu</button>
-    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($nomeCompleto); ?></div>
+    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($nomeUsuario, ENT_QUOTES, 'UTF-8'); ?></div>
   </div>
 </nav>
 
@@ -132,7 +115,7 @@ if ($conn->connect_error) {
   <a href="adicionar_colaborador.php">Adicionar Colaborador</a>
   <a href="metas.php">Definir Metas</a>
   <a href="fechar_mes.php">Fechar Mês</a>
-  <a href="importar_arquivos.php">Importar Arquivos</a> <!-- ✅ Alterado aqui -->
+  <a href="importar_arquivos.php">Importar Arquivos</a>
   <a href="relatorios.php">Relatórios</a>
   <a href="logout.php">Sair</a>
 </div>

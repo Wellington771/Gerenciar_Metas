@@ -11,19 +11,14 @@ $msg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome = trim($_POST['nome']);
-    $email = trim($_POST['email']);
-    $senha = trim($_POST['senha']);
     $codigo = trim($_POST['codigo']);
-    $nivel = $_POST['nivel'] ?? 'Colaborador';
 
-    if ($nome && $email && $senha && $codigo) {
-        $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-
-        $stmt = $pdo->prepare("INSERT INTO colaboradores (NomeCompleto, Email, SenhaHash, NivelAcesso, CodigoExterno) VALUES (?, ?, ?, ?, ?)");
-        if ($stmt->execute([$nome, $email, $senhaHash, $nivel, $codigo])) {
+    if ($nome && $codigo) {
+        $stmt = $pdo->prepare("INSERT INTO Colaboradores (NomeCompleto, CodigoExterno) VALUES (?, ?)");
+        if ($stmt->execute([$nome, $codigo])) {
             $msg = "Colaborador adicionado com sucesso!";
         } else {
-            $msg = "Erro ao adicionar colaborador: " . $stmt->errorInfo()[2];
+            $msg = "Erro ao adicionar colaborador.";
         }
     } else {
         $msg = "Preencha todos os campos.";
@@ -59,29 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="text" name="nome" id="nome" class="form-control" required>
         </div>
         <div class="mb-3">
-            <label for="email" class="form-label">E-mail</label>
-            <input type="email" name="email" id="email" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label for="senha" class="form-label">Senha</label>
-            <input type="password" name="senha" id="senha" class="form-control" required>
-        </div>
-        <div class="mb-3">
             <label for="codigo" class="form-label">Código Externo</label>
             <input type="text" name="codigo" id="codigo" class="form-control" required>
         </div>
-        <div class="mb-3">
-            <label for="nivel" class="form-label">Nível de Acesso</label>
-            <select name="nivel" id="nivel" class="form-control" required>
-                <option value="Colaborador">Colaborador</option>
-                <option value="Admin">Admin</option>
-            </select>
+        <div class="d-flex justify-content-end gap-2">
+            <a href="dashboard.php" class="btn btn-secondary px-4">Voltar ao Início</a>
+            <button type="submit" class="btn btn-primary px-4">Adicionar</button>
         </div>
-        <button type="submit" class="btn btn-success">Adicionar Colaborador</button>
     </form>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

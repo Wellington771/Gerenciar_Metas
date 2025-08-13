@@ -1,5 +1,5 @@
 <?php
-// includes/footer.php
+
 ?>
 <footer class="text-center py-4 mt-5" style="background:#e8f5e9; color:#388e3c;">
     <small>© <?php echo date('Y'); ?> Rumo à Meta - O Boticário</small>

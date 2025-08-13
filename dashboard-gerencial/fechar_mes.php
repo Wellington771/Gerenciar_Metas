@@ -8,29 +8,21 @@ if (!isset($_SESSION['usuario'])) {
     exit;
 }
 
-// Conexão com o banco de dados
-$host = 'localhost';
-$usuario_db = 'root';
-$senha_db = '';
-$banco = 'gerenciadormetasdb';
+// Inclui a conexão com o banco de dados
+require_once 'config/database.php';
 
-$conn = new mysqli($host, $usuario_db, $senha_db, $banco);
-if ($conn->connect_error) {
-    die('Erro de conexão: ' . $conn->connect_error);
-}
-
+// Flag para saber se a confirmação de fechamento foi feita
 $confirmado = false;
 
+// Verifica se o formulário foi enviado e se o botão "confirmar" foi clicado
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
-    // Remove vendas do mês atual
-    $mesAtual = date('Y-m-01');
-    $sql = "DELETE FROM historicovendas WHERE DataVenda >= ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('s', $mesAtual);
-    $stmt->execute();
-    $stmt->close();
+    // Reseta todas as vendas dos colaboradores no banco de dados
+    $pdo->exec('UPDATE Colaboradores SET ValorAtualVendas = 0');
 
+    // Seta como confirmado para exibir mensagem de sucesso
     $confirmado = true;
+
+    // Redireciona de volta para o dashboard após 3 segundos
     header("refresh:3;url=dashboard.php");
 }
 ?>
@@ -39,17 +31,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
 <head>
     <meta charset="UTF-8">
     <title>Fechar Mês - Rumo à Meta</title>
+
+    <!-- CSS do Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Estilos personalizados -->
     <style>
-        body { background-color: #f4f6f9; }
-        .card-custom { border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .btn-primary { background-color: #388e3c; border-color: #388e3c; }
-        .btn-primary:hover { background-color: #2e7d32; }
-        .btn-danger { background-color: #d32f2f; border-color: #d32f2f; }
-        .btn-danger:hover { background-color: #b71c1c; }
+        body {
+            background-color: #f4f6f9;
+        }
+        .card-custom {
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .btn-primary {
+            background-color: #388e3c;
+            border-color: #388e3c;
+        }
+        .btn-primary:hover {
+            background-color: #2e7d32;
+        }
+        .btn-danger {
+            background-color: #d32f2f;
+            border-color: #d32f2f;
+        }
+        .btn-danger:hover {
+            background-color: #b71c1c;
+        }
     </style>
 </head>
 <body>
+
 <!-- Cabeçalho da aplicação -->
 <?php include 'includes/header.php'; ?>
 
@@ -61,15 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
                 <h4 class="mb-3 text-center text-success">Fechamento de Mês</h4>
 
                 <?php if ($confirmado): ?>
-                    <!-- Mensagem de sucesso após remover as vendas do mês atual -->
+                    <!-- Mensagem de sucesso após zerar as vendas -->
                     <div class="alert alert-success text-center">
-                        ✅ Todas as vendas do mês foram removidas com sucesso!<br>
+                        ✅ Todas as vendas foram zeradas com sucesso!<br>
                         Redirecionando para o painel...
                     </div>
                 <?php else: ?>
                     <!-- Instruções e botões -->
                     <p class="text-center">
-                        Esta ação irá <strong>remover todas as vendas do mês atual</strong> de todos os colaboradores,
+                        Esta ação irá <strong>reiniciar o registro de vendas</strong> de todos os colaboradores,
                         dando início a um novo ciclo comercial.
                     </p>
                     <div class="text-center">
@@ -97,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
-                Ao prosseguir, todas as vendas do mês atual serão removidas, iniciando um novo ciclo.<br>
+                Ao prosseguir, todas as vendas dos colaboradores serão zeradas, iniciando um novo ciclo.<br>
                 <strong>Esta ação é irreversível.</strong>
             </div>
             <div class="modal-footer">
@@ -118,4 +130,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-<?php
