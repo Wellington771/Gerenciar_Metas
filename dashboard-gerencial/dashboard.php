@@ -13,18 +13,23 @@ require_once 'config/database.php';
 
 $msg = ''; // Mensagem de status do processamento do arquivo
 
-// Verifica se houve envio de arquivo via POST
+// =========================================================================
+// LÓGICA DE UPLOAD E PROCESSAMENTO DE ARQUIVO
+// =========================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
     $file = $_FILES['csv_file'];
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)); // Obtém extensão do arquivo
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
-    // Verifica se é um arquivo .xlsx válido
+    // O código aqui espera um arquivo .xlsx.
+    // Lembre-se: é necessário uma biblioteca como o PhpSpreadsheet para ler .xlsx.
+    // O código abaixo é um exemplo de como seria a lógica de importação
+    // assumindo que a biblioteca já está instalada e configurada.
+    
     if ($ext !== 'xlsx') {
         $msg = 'Erro: Por favor, envie um arquivo Excel (.xlsx) válido.';
     } else if ($file['error'] === UPLOAD_ERR_OK) {
         $uploadDir = __DIR__ . '/uploads';
 
-        // Garante que a pasta de upload existe
         if (!is_dir($uploadDir)) {
             if (!mkdir($uploadDir, 0777, true)) {
                 $msg = 'Erro: Não foi possível criar a pasta uploads. Verifique permissões.';
@@ -32,115 +37,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
         }
 
         if (empty($msg)) {
-            // Define nome único para o arquivo
             $excelPath = $uploadDir . '/' . uniqid('excel_', true) . '_' . basename($file['name']);
 
-            // Move o arquivo para a pasta uploads
             if (!move_uploaded_file($file['tmp_name'], $excelPath)) {
                 $msg = 'Erro ao mover o arquivo enviado. Verifique permissões da pasta uploads.';
             } else {
-
-                // *** Aqui faltou a leitura do arquivo com biblioteca como PhpSpreadsheet ***
-
-                // Normaliza o cabeçalho removendo espaços, aspas e caracteres invisíveis
-                $header = array_map(function($h) { 
-                    return trim(str_replace(['"', "'", "\u{00a0}"], '', $h)); 
-                }, $header);
-
-                // Verifica se o cabeçalho está no formato correto
-                $headerOk = $header === $headerEsperado;
-                if (!$headerOk) {
-                    $msg = 'Erro: O arquivo Excel não está no formato esperado. Verifique o cabeçalho e a ordem das colunas.';
-                    return;
-                }
-
-                // Inicializa contadores
-                $linhasProcessadas = 0;
-                $linhasInvalidas = 0;
-
-                // Percorre os dados (ignorando a primeira linha que é cabeçalho)
-                foreach (array_slice($rows, 1) as $data) {
-                    if (count($data) < 5) {
-                        $linhasInvalidas++;
-                        continue;
-                    }
-
-                    $codigoRevendedor = trim($data[3]);
-                    $valorStr = trim($data[2]);
-
-                    // Remove "R$", espaços e troca vírgula por ponto
-                    $valorStr = str_replace(['R$', 'r$', ' '], '', $valorStr);
-                    $valorStr = str_replace(',', '.', $valorStr);
-
-                    if (!is_numeric($valorStr)) {
-                        $linhasInvalidas++;
-                        continue;
-                    }
-
-                    $valor = floatval($valorStr);
-
-                    // Busca colaborador pelo código
-                    $stmt = $pdo->prepare('SELECT ColaboradorID FROM Colaboradores WHERE CodigoExterno = ?');
-                    $stmt->execute([$codigoRevendedor]);
-                    $colab = $stmt->fetch();
-
-                    if ($colab) {
-                        $colabID = $colab['ColaboradorID'];
-
-                        // Categorização simples (ajustável)
-                        $categoria = 'produtos gerais';
-
-                        // Insere no histórico de vendas
-                        $stmt = $pdo->prepare('INSERT INTO HistoricoVendas (ColaboradorID, ValorVenda, Categoria, InfoCSV) VALUES (?, ?, ?, ?)');
-                        $stmt->execute([$colabID, $valor, $categoria, implode(';', $data)]);
-
-                        // Atualiza o valor atual de vendas do colaborador
-                        $stmt = $pdo->prepare('UPDATE Colaboradores SET ValorAtualVendas = ValorAtualVendas + ? WHERE ColaboradorID = ?');
-                        $stmt->execute([$valor, $colabID]);
-
-                        $linhasProcessadas++;
-                    } else {
-                        $linhasInvalidas++;
-                        continue;
-                    }
-                }
-
-                // Mostra resultado final da importação
-                if ($linhasProcessadas > 0) {
-                    $msg = 'CSV processado com sucesso! ' . $linhasProcessadas . ' linha(s) inserida(s).' . 
-                          ($linhasInvalidas > 0 ? ' ' . $linhasInvalidas . ' linha(s) ignorada(s) por erro.' : '');
-
-                    // Atualiza os dados para exibição na dashboard
-                    $stmt = $pdo->query('SELECT * FROM Colaboradores ORDER BY ValorAtualVendas DESC');
-                    $colaboradores = $stmt->fetchAll();
-
-                    $receitaTotal = 0;
-                    foreach ($colaboradores as $c) {
-                        $receitaTotal += $c['ValorAtualVendas'];
-                    }
-
-                    // Prepara os dados por categoria
-                    $vendasPorCategoria = [];
-                    foreach ($colaboradores as $c) {
-                        $id = $c['ColaboradorID'];
-                        $vendasPorCategoria[$id] = [
-                            'maquiagem' => 0,
-                            'skin care' => 0,
-                            'produtos gerais' => 0
-                        ];
-
-                        $stmt = $pdo->prepare("SELECT Categoria, SUM(ValorVenda) as total 
-                                               FROM HistoricoVendas 
-                                               WHERE ColaboradorID = ? 
-                                               GROUP BY Categoria");
-                        $stmt->execute([$id]);
-
-                        while ($row = $stmt->fetch()) {
-                            $cat = strtolower($row['Categoria']);
-                            $vendasPorCategoria[$id][$cat] = $row['total'];
-                        }
-                    }
-                }
+                // *** ATENÇÃO: A LÓGICA DE LEITURA DO EXCEL ESTÁ FALTANDO ***
+                // Você precisa de uma biblioteca (como o PhpSpreadsheet) para ler
+                // o arquivo Excel. O trecho abaixo é APENAS um esboço.
+                
+                // Exemplo de como usar o PhpSpreadsheet (precisa estar instalado via Composer)
+                // require 'vendor/autoload.php';
+                // use PhpOffice\PhpSpreadsheet\IOFactory;
+                // $spreadsheet = IOFactory::load($excelPath);
+                // $sheetData = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+                
+                // Aqui o código original tentava usar a variável $header e $rows, que
+                // não existem. A lógica de processamento foi removida e precisa
+                // ser adicionada aqui após a leitura do arquivo.
+                
+                $msg = 'Importação de Excel em desenvolvimento. Arquivo ' . basename($file['name']) . ' enviado com sucesso.';
             }
         }
     } else {
@@ -148,17 +64,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
     }
 }
 
+// =========================================================================
+// LÓGICA DE BUSCA DE DADOS PARA A DASHBOARD (UNIFICADA)
+// =========================================================================
+
 // Consulta geral de colaboradores para exibição na dashboard
+// A coluna 'ValorAtualVendas' deve existir na tabela 'Colaboradores'
 $stmt = $pdo->query('SELECT * FROM Colaboradores ORDER BY ValorAtualVendas DESC');
 $colaboradores = $stmt->fetchAll();
 
-// Calcula a receita total somando vendas de todos os colaboradores
+// Calcula a receita total
 $receitaTotal = 0;
 foreach ($colaboradores as $c) {
     $receitaTotal += $c['ValorAtualVendas'];
 }
 
-// Calcula vendas por categoria para cada colaborador (para exibir nas seções específicas)
+// Calcula vendas por categoria para cada colaborador
 $vendasPorCategoria = [];
 foreach ($colaboradores as $c) {
     $id = $c['ColaboradorID'];
@@ -168,68 +89,63 @@ foreach ($colaboradores as $c) {
         'produtos gerais' => 0
     ];
 
+    // A coluna 'Categoria' deve existir na tabela 'HistoricoVendas'
     $stmt = $pdo->prepare("SELECT Categoria, SUM(ValorVenda) as total 
-                           FROM HistoricoVendas 
-                           WHERE ColaboradorID = ? 
-                           GROUP BY Categoria");
+                            FROM HistoricoVendas 
+                            WHERE ColaboradorID = ? 
+                            GROUP BY Categoria");
     $stmt->execute([$id]);
 
     while ($row = $stmt->fetch()) {
         $cat = strtolower($row['Categoria']);
-        $vendasPorCategoria[$id][$cat] = $row['total'];
+        // Garante que a chave existe antes de atribuir
+        if (isset($vendasPorCategoria[$id][$cat])) {
+            $vendasPorCategoria[$id][$cat] = $row['total'];
+        }
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <title>Dashboard Gerencial</title>
     
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Estilos personalizados -->
     <style>
         body { background: #e8f5e9; } /* Fundo verde-claro */
         .card-kpi { background: #388e3c; color: #fff; } /* Cartão de receita total */
         .table-success { background: #c8e6c9; }
         .btn-success { background-color: #388e3c; border: none; }
+        .top-action-btn {
+            font-weight: bold !important;
+            color: #1b3c1b !important;
+            background: #e8f5e9 !important;
+            border: 2px solid #388e3c !important;
+            margin-left: 10px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .top-action-btn:hover, .top-action-btn:focus {
+            background: #388e3c !important;
+            color: #fff !important;
+        }
     </style>
 </head>
 <body>
 
-<!-- Cabeçalho -->
 <?php include 'includes/header.php'; ?>
-
-<!-- Estilo adicional para os botões do topo -->
-<style>
-    .top-action-btn {
-        font-weight: bold !important;
-        color: #1b3c1b !important;
-        background: #e8f5e9 !important;
-        border: 2px solid #388e3c !important;
-        margin-left: 10px;
-        transition: background 0.2s, color 0.2s;
-    }
-    .top-action-btn:hover, .top-action-btn:focus {
-        background: #388e3c !important;
-        color: #fff !important;
-    }
-</style>
 
 <div class="container">
 
-    <!-- Exibe mensagem de sucesso ou erro do upload, se houver -->
     <?php if ($msg): ?>
         <div class="alert alert-info mt-2 text-center" style="font-size:1.2rem;max-width:600px;margin:20px auto;">
             <?php echo $msg; ?>
         </div>
     <?php endif; ?>
 
-    <!-- KPIs principais -->
     <div class="row mt-4">
-        <!-- Receita total -->
         <div class="col-md-4">
             <div class="card card-kpi mb-4 shadow">
                 <div class="card-body text-center">
@@ -239,7 +155,6 @@ foreach ($colaboradores as $c) {
             </div>
         </div>
 
-        <!-- Lista de metas dos colaboradores -->
         <div class="col-md-8">
             <div class="card mb-4 shadow" style="border-left: 5px solid #388e3c;">
                 <div class="card-body">
@@ -259,7 +174,6 @@ foreach ($colaboradores as $c) {
         </div>
     </div>
 
-    <!-- Ranking geral de vendedores -->
     <h4 class="mt-5 mb-3" style="color:#388e3c;"><i class="bi bi-trophy"></i> Ranking de Vendedores</h4>
     <div class="table-responsive">
         <table class="table table-hover table-bordered align-middle">
@@ -293,7 +207,6 @@ foreach ($colaboradores as $c) {
         </table>
     </div>
 
-    <!-- Tabela de metas por categoria: Maquiagem -->
     <h4 style="color:#388e3c;" class="mt-5"><i class="bi bi-brush"></i> Maquiagem</h4>
     <div class="table-responsive">
         <table class="table table-hover table-bordered align-middle">
@@ -325,7 +238,6 @@ foreach ($colaboradores as $c) {
         </table>
     </div>
 
-    <!-- Tabela de metas por categoria: Skin Care -->
     <h4 style="color:#388e3c;" class="mt-5"><i class="bi bi-droplet"></i> Skin Care</h4>
     <div class="table-responsive">
         <table class="table table-hover table-bordered align-middle">
@@ -357,7 +269,6 @@ foreach ($colaboradores as $c) {
         </table>
     </div>
 
-    <!-- Tabela de metas por categoria: Produtos Gerais (Eudora) -->
     <h4 style="color:#388e3c;" class="mt-5"><i class="bi bi-box"></i> Eudora</h4>
     <div class="table-responsive">
         <table class="table table-hover table-bordered align-middle">
@@ -390,13 +301,10 @@ foreach ($colaboradores as $c) {
     </div>
 </div>
 
-<!-- Rodapé -->
 <?php include 'includes/footer.php'; ?>
 
-<!-- Ícones do Bootstrap -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

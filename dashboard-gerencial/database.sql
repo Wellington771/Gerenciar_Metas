@@ -74,6 +74,7 @@ CREATE TABLE `metas` (
 
 -- ============================
 -- Tabela de histórico de vendas
+-- Esta tabela agora inclui a coluna 'Categoria'
 -- ============================
 CREATE TABLE `historicovendas` (
   `HistoricoID` INT NOT NULL AUTO_INCREMENT,
@@ -82,6 +83,7 @@ CREATE TABLE `historicovendas` (
   `ProdutoID` INT,
   `ValorVenda` DECIMAL(12,2) NOT NULL,
   `DataVenda` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `Categoria` VARCHAR(100) DEFAULT NULL COMMENT 'Categoria do produto na venda',
   PRIMARY KEY (`HistoricoID`),
   FOREIGN KEY (`ColaboradorID`) REFERENCES `colaboradores`(`ColaboradorID`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`RevendedorID`) REFERENCES `revendedores`(`RevendedorID`) ON DELETE SET NULL ON UPDATE CASCADE,
