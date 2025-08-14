@@ -2,7 +2,6 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 if (!isset($_SESSION['usuario'])) {
     header('Location: index.php');
     exit;
@@ -10,6 +9,7 @@ if (!isset($_SESSION['usuario'])) {
 
 // Exemplo: $_SESSION['usuario'] é um array, deve conter pelo menos 'NomeCompleto'
 $nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario']['NomeCompleto'] : 'Usuário';
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -105,12 +105,12 @@ $nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario'
 <nav class="navbar navbar-dark">
   <div class="container-fluid navbar-container">
     <button id="btnToggleSidebar">Menu</button>
-    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($nomeUsuario, ENT_QUOTES, 'UTF-8'); ?></div>
+    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($_SESSION['usuario']); ?></div>
   </div>
 </nav>
 
-<!-- Sidebar -->
 <div id="sidebarMenu">
+  <a href="dashboard.php">Dashboard</a>
   <a href="adicionar_colaborador.php">Adicionar Colaborador</a>
   <a href="excluir_colaborador.php">Excluir Colaborador</a>
   <a href="metas.php">Definir Metas</a>
@@ -120,7 +120,6 @@ $nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario'
   <a href="logout.php">Sair</a>
 </div>
 
-<!-- Overlay -->
 <div id="sidebarOverlay"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
