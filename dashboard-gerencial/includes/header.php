@@ -8,9 +8,8 @@ if (!isset($_SESSION['usuario'])) {
     exit;
 }
 
-// Exemplo: $_SESSION['usuario'] é um array, deve conter pelo menos 'NomeCompleto' (ajuste se for outro campo)
+// Exemplo: $_SESSION['usuario'] é um array, deve conter pelo menos 'NomeCompleto'
 $nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario']['NomeCompleto'] : 'Usuário';
-
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -113,6 +112,7 @@ $nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario'
 <!-- Sidebar -->
 <div id="sidebarMenu">
   <a href="adicionar_colaborador.php">Adicionar Colaborador</a>
+  <a href="excluir_colaborador.php">Excluir Colaborador</a>
   <a href="metas.php">Definir Metas</a>
   <a href="fechar_mes.php">Fechar Mês</a>
   <a href="importar_arquivos.php">Importar Arquivos</a>
