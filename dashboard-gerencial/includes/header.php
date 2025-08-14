@@ -2,15 +2,10 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 if (!isset($_SESSION['usuario'])) {
     header('Location: index.php');
     exit;
 }
-
-// Exemplo: $_SESSION['usuario'] é um array, deve conter pelo menos 'NomeCompleto' (ajuste se for outro campo)
-$nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario']['NomeCompleto'] : 'Usuário';
-
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -106,12 +101,13 @@ $nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario'
 <nav class="navbar navbar-dark">
   <div class="container-fluid navbar-container">
     <button id="btnToggleSidebar">Menu</button>
-    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($nomeUsuario, ENT_QUOTES, 'UTF-8'); ?></div>
+    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($_SESSION['usuario']); ?></div>
   </div>
 </nav>
 
 <!-- Sidebar -->
 <div id="sidebarMenu">
+  <a href="dashboard.php">Dashboard</a>
   <a href="adicionar_colaborador.php">Adicionar Colaborador</a>
   <a href="metas.php">Definir Metas</a>
   <a href="fechar_mes.php">Fechar Mês</a>
