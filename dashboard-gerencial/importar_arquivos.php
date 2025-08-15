@@ -444,7 +444,7 @@ if (!$csvData && isset($_SESSION['csv_data'])) {
                 <i class="bi bi-cloud-upload"></i> Importar e Extrair Arquivos
             </h2>
             <button type="button" class="btn btn-light btn-sm" onclick="console.log('Redirecionando para dashboard.php (topo)'); window.location.href='dashboard.php'">
-                <i class="bi bi-arrow-left"></i> Voltar ao Dashboard
+                <i class="bi bi-arrow-left"></i> Voltar ao Inicio
             </button>
         </div>
         <div class="card-body">
@@ -730,7 +730,7 @@ if (!$csvData && isset($_SESSION['csv_data'])) {
 
              Botão para voltar ao início 
             <button type="button" class="btn-voltar" onclick="console.log('Redirecionando para dashboard.php (fundo)'); window.location.href='dashboard.php'">
-                <i class="bi bi-house"></i> Voltar ao Dashboard
+                <i class="bi bi-house"></i> Voltar ao Inicio
             </button>
 
         </div>
