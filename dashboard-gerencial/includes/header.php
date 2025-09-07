@@ -105,7 +105,7 @@ $nomeUsuario = isset($_SESSION['usuario']['NomeCompleto']) ? $_SESSION['usuario'
 <nav class="navbar navbar-dark">
   <div class="container-fluid navbar-container">
     <button id="btnToggleSidebar">Menu</button>
-    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($_SESSION['usuario']); ?></div>
+    <div class="usuario-texto">Bem Vindo, <?php echo htmlspecialchars($nomeUsuario); ?></div>
   </div>
 </nav>
 

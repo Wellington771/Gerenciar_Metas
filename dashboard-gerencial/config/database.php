@@ -1,7 +1,7 @@
 <?php
 // config/database.php
 $host = 'localhost';
-$db   = 'GerenciadorMetasDB';
+$db   = 'gerenciadormetasdb';
 $user = 'root';
 $pass = '';
 $charset = 'utf8mb4';
