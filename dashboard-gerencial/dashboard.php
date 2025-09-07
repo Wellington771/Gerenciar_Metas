@@ -13,6 +13,54 @@ require_once 'config/database.php';
 
 $msg = ''; // Mensagem de status do processamento do arquivo
 
+function calcularPenetracaoMaquiagem($pdo, $colaboradorId, $mesAno = null) {
+    if (!$mesAno) {
+        $mesAno = date('Y-m'); // Mês atual se não especificado
+    }
+    
+    // Conta revendedores únicos que o colaborador atendeu no mês
+    $stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT CodigoRevendedor) as total_revendedores
+        FROM HistoricoVendas 
+        WHERE ColaboradorID = ? 
+        AND CodigoRevendedor IS NOT NULL 
+        AND CodigoRevendedor != ''
+        AND DATE_FORMAT(DataVenda, '%Y-%m') = ?
+    ");
+    $stmt->execute([$colaboradorId, $mesAno]);
+    $totalRevendedores = $stmt->fetchColumn();
+    
+    if ($totalRevendedores == 0) {
+        return [
+            'penetracao' => 0,
+            'revendedores_maquiagem' => 0,
+            'total_revendedores' => 0
+        ];
+    }
+    
+    // Conta revendedores únicos que compraram maquiagem no mês
+    $stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT CodigoRevendedor) as revendedores_maquiagem
+        FROM HistoricoVendas 
+        WHERE ColaboradorID = ? 
+        AND CodigoRevendedor IS NOT NULL 
+        AND CodigoRevendedor != ''
+        AND LOWER(Categoria) LIKE '%maquiagem%'
+        AND DATE_FORMAT(DataVenda, '%Y-%m') = ?
+    ");
+    $stmt->execute([$colaboradorId, $mesAno]);
+    $revendedoresMaquiagem = $stmt->fetchColumn();
+    
+    // Calcula penetração: (revendedores que compraram maquiagem / total revendedores) * 100
+    $penetracao = ($revendedoresMaquiagem / $totalRevendedores) * 100;
+    
+    return [
+        'penetracao' => round($penetracao, 2),
+        'revendedores_maquiagem' => $revendedoresMaquiagem,
+        'total_revendedores' => $totalRevendedores
+    ];
+}
+
 // Verifica se houve envio de arquivo via POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
     $file = $_FILES['csv_file'];
@@ -90,9 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                         // Categorização simples (ajustável)
                         $categoria = 'produtos gerais';
 
-                        // Insere no histórico de vendas
-                        $stmt = $pdo->prepare('INSERT INTO HistoricoVendas (ColaboradorID, ValorVenda, Categoria, InfoCSV) VALUES (?, ?, ?, ?)');
-                        $stmt->execute([$colabID, $valor, $categoria, implode(';', $data)]);
+                        $stmt = $pdo->prepare('INSERT INTO HistoricoVendas (ColaboradorID, ValorVenda, Categoria, InfoCSV, CodigoRevendedor) VALUES (?, ?, ?, ?, ?)');
+                        $stmt->execute([$colabID, $valor, $categoria, implode(';', $data), $codigoRevendedor]);
 
                         // Atualiza o valor atual de vendas do colaborador
                         $stmt = $pdo->prepare('UPDATE Colaboradores SET ValorAtualVendas = ValorAtualVendas + ? WHERE ColaboradorID = ?');
@@ -160,6 +207,7 @@ foreach ($colaboradores as $c) {
 
 // Calcula vendas por categoria para cada colaborador (para exibir nas seções específicas)
 $vendasPorCategoria = [];
+$penetracaoPorColaborador = [];
 foreach ($colaboradores as $c) {
     $id = $c['ColaboradorID'];
     $vendasPorCategoria[$id] = [
@@ -178,6 +226,8 @@ foreach ($colaboradores as $c) {
         $cat = strtolower($row['Categoria']);
         $vendasPorCategoria[$id][$cat] = $row['total'];
     }
+    
+    $penetracaoPorColaborador[$id] = calcularPenetracaoMaquiagem($pdo, $id);
 }
 ?>
 <!DOCTYPE html>
@@ -195,6 +245,11 @@ foreach ($colaboradores as $c) {
         .card-kpi { background: #388e3c; color: #fff; } /* Cartão de receita total */
         .table-success { background: #c8e6c9; }
         .btn-success { background-color: #388e3c; border: none; }
+        /* Estilos para indicadores de penetração */
+        .penetracao-alta { color: #28a745; font-weight: bold; }
+        .penetracao-media { color: #ffc107; font-weight: bold; }
+        .penetracao-baixa { color: #dc3545; font-weight: bold; }
+        .card-penetracao { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
     </style>
 </head>
 <body>
@@ -230,7 +285,7 @@ foreach ($colaboradores as $c) {
     <!-- KPIs principais -->
     <div class="row mt-4">
         <!-- Receita total -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card card-kpi mb-4 shadow">
                 <div class="card-body text-center">
                     <h5 class="card-title">Receita Total</h5>
@@ -239,8 +294,30 @@ foreach ($colaboradores as $c) {
             </div>
         </div>
 
+        <!-- Novo KPI: Penetração Média de Maquiagem -->
+        <div class="col-md-3">
+            <div class="card card-penetracao mb-4 shadow">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Penetração Média</h5>
+                    <?php 
+                    $penetracaoMedia = 0;
+                    $colaboradoresComDados = 0;
+                    foreach ($penetracaoPorColaborador as $pen) {
+                        if ($pen['total_revendedores'] > 0) {
+                            $penetracaoMedia += $pen['penetracao'];
+                            $colaboradoresComDados++;
+                        }
+                    }
+                    $penetracaoMedia = $colaboradoresComDados > 0 ? $penetracaoMedia / $colaboradoresComDados : 0;
+                    ?>
+                    <h2><?php echo number_format($penetracaoMedia, 1); ?>%</h2>
+                    <small>Maquiagem</small>
+                </div>
+            </div>
+        </div>
+
         <!-- Lista de metas dos colaboradores -->
-        <div class="col-md-8">
+        <div class="col-md-6">
             <div class="card mb-4 shadow" style="border-left: 5px solid #388e3c;">
                 <div class="card-body">
                     <h5 class="card-title" style="color:#388e3c;">Resumo das Metas</h5>
@@ -257,6 +334,50 @@ foreach ($colaboradores as $c) {
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Nova seção: Penetração de Maquiagem -->
+    <h4 class="mt-5 mb-3" style="color:#667eea;"><i class="bi bi-graph-up"></i> Penetração de Maquiagem</h4>
+    <!-- Instrução de como funciona removida -->
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Nome</th>
+                    <th>Total Revendedores</th>
+                    <th>Revendedores Maquiagem</th>
+                    <th>Penetração (%)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($colaboradores as $c): ?>
+                <tr>
+                    <td><strong><?php echo htmlspecialchars($c['NomeCompleto']); ?></strong></td>
+                    <td class="text-center"><?php echo $penetracaoPorColaborador[$c['ColaboradorID']]['total_revendedores']; ?></td>
+                    <td class="text-center"><?php echo $penetracaoPorColaborador[$c['ColaboradorID']]['revendedores_maquiagem']; ?></td>
+                    <td class="text-center">
+                        <?php 
+                        $pen = $penetracaoPorColaborador[$c['ColaboradorID']]['penetracao'];
+                        $classe = $pen >= 70 ? 'penetracao-alta' : ($pen >= 40 ? 'penetracao-media' : 'penetracao-baixa');
+                        ?>
+                        <span class="<?php echo $classe; ?>"><?php echo number_format($pen, 1); ?>%</span>
+                    </td>
+                    <td class="text-center">
+                        <?php 
+                        if ($pen >= 70) {
+                            echo '<span class="badge bg-success">Excelente ≥70%</span>';
+                        } elseif ($pen >= 40) {
+                            echo '<span class="badge bg-warning">Bom ≥40%</span>';
+                        } else {
+                            echo '<span class="badge bg-danger">Precisa Melhorar &lt;40%</span>';
+                        }
+                        ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
 
     <!-- Ranking geral de vendedores -->
@@ -303,6 +424,8 @@ foreach ($colaboradores as $c) {
                     <th>Meta Maquiagem (R$)</th>
                     <th>Vendas Maquiagem (R$)</th>
                     <th>Falta para Meta (R$)</th>
+                    <!-- Adiciona coluna de penetração na tabela de maquiagem -->
+                    <th>Penetração (%)</th>
                 </tr>
             </thead>
             <tbody>
@@ -318,6 +441,14 @@ foreach ($colaboradores as $c) {
                         $falta = $meta - $venda;
                         echo $falta > 0 ? number_format($falta, 2, ',', '.') : 'Meta atingida!';
                         ?>
+                    </td>
+                    <!-- Exibe penetração na tabela de maquiagem -->
+                    <td>
+                        <?php 
+                        $pen = $penetracaoPorColaborador[$c['ColaboradorID']]['penetracao'];
+                        $classe = $pen >= 70 ? 'penetracao-alta' : ($pen >= 40 ? 'penetracao-media' : 'penetracao-baixa');
+                        ?>
+                        <span class="<?php echo $classe; ?>"><?php echo number_format($pen, 1); ?>%</span>
                     </td>
                 </tr>
                 <?php endforeach; ?>
