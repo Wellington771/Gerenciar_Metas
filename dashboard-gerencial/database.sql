@@ -39,6 +39,8 @@ CREATE TABLE `HistoricoVendas` (
   `Categoria` VARCHAR(50) NOT NULL COMMENT 'Maquiagem, Skin Care, Produtos Gerais',
   `DataVenda` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `InfoCSV` TEXT DEFAULT NULL COMMENT 'Informações adicionais do CSV importado',
+  `CodigoRevendedor` VARCHAR(20) DEFAULT NULL COMMENT 'Código do revendedor',
+  `Revendedor` VARCHAR(100) DEFAULT NULL COMMENT 'Nome do revendedor',
   PRIMARY KEY (`HistoricoID`),
   FOREIGN KEY (`ColaboradorID`) REFERENCES `colaboradores`(`ColaboradorID`) ON DELETE CASCADE ON UPDATE CASCADE,
   INDEX `idx_historico_colaborador` (`ColaboradorID`),
@@ -101,7 +103,10 @@ VALUES
 ('Camila', 'camila@example.com', '', 'Colaborador', 1, '20293243', 0.00, 0.00, 0.00, 0.00, 0.00);
 
 INSERT INTO `usuarios` (`NomeUsuario`, `SenhaHash`, `NivelAcesso`, `Ativo`)
-VALUES ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 1);
+VALUES ('admin', 'admin', 'Admin', 1);
+
+INSERT INTO `usuarios` (`NomeUsuario`, `SenhaHash`, `NivelAcesso`, `Ativo`)
+VALUES ('treinamento', 'treinamento', 'Usuario', 1);
 
 INSERT INTO `configuracao` (`Chave`, `Valor`, `Descricao`)
 VALUES 

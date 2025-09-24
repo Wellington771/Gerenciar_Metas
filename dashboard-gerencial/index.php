@@ -18,16 +18,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario = $_POST['usuario'] ?? '';
     $senha = $_POST['senha'] ?? '';
 
-    // Verifica se usuário e senha conferem com valores fixos pré-definidos
-    if ($usuario === 'Geane_Lacerda' && $senha === 'Lacerd@981') {
-        // Se estiver correto, salva o usuário na sessão para manter o login
-        $_SESSION['usuario'] = $usuario;
+    // Conecta ao banco de dados
+    require_once 'config/database.php';
 
-        // Redireciona para a página dashboard.php
+    // Busca o usuário no banco
+    $stmt = $pdo->prepare('SELECT * FROM usuarios WHERE NomeUsuario = ? AND Ativo = 1 LIMIT 1');
+    $stmt->execute([$usuario]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($user && $user['SenhaHash'] === $senha) {
+        // Login bem-sucedido
+        $_SESSION['usuario'] = $usuario;
         header('Location: dashboard.php');
-        exit; // Encerra o script para garantir o redirecionamento imediato
+        exit;
     } else {
-        // Caso usuário ou senha estejam errados, define mensagem de erro
         $erro = 'Usuário ou senha inválidos!';
     }
 }
